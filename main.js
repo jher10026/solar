@@ -275,6 +275,8 @@ function updateSensorStatus(isOnline) {
         statusDot.style.background = '#95a5a6';
         statusDot.style.boxShadow = 'none';
     }
+    // ✅ AGREGAR ESTA LÍNEA:
+    updateHeatMapColor('offline');
 }
 
 // ===== HISTÓRICO LOCAL =====
@@ -814,6 +816,21 @@ function updateHeatMapColor(uvIndex) {
     if (!heatCircle) return;
     
     let color, fillOpacity;
+
+    // 🔴 SI ESTÁ OFFLINE
+    if (uvIndex === 'offline') {
+        color = '#95a5a6'; // Gris
+        fillOpacity = 0.2;
+        heatCircle.setStyle({
+            color: color,
+            fillColor: color,
+            fillOpacity: fillOpacity,
+            radius: 200,
+            weight: 2
+        });
+        console.log('🗺️ Círculo de calor: OFFLINE (gris)');
+        return;
+    }
     
     if (uvIndex < 3) {
         color = '#27ae60'; // Verde
