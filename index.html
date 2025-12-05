@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SolarGuard Andahuaylas | Monitoreo UV en Tiempo Real</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+</head>
+<body>
+    <header class="header">
+        <div class="container">
+            <div class="header-content">
+                <div class="logo">
+                    <div class="logo-icon">☀️</div>
+                    <div class="logo-text"><h1>SolarGuard</h1><p>Andahuaylas</p></div>
+                </div>
+                <nav class="nav-menu">
+                    <a href="#inicio">Inicio</a>
+                    <a href="#datos">Datos</a>
+                    <a href="#mapa">Mapa</a>
+                    <a href="#problema">Problema</a>
+                    <a href="#enfermedades">Salud</a>
+                </nav>
+                <div class="header-right">
+                    <div class="sensor-status-indicator">
+                        <div class="status-dot" id="statusDot"></div>
+                    </div>
+                        <button class="alert-toggle-btn" id="alertToggleBtn" onclick="openAlertSettings()" title="Configurar Alertas UV">🔔</button>
+                    </button>
+                    <button class="theme-toggle" id="themeToggle" title="Cambiar tema"><span id="themeIcon">🌙</span></button>
+                    <button class="export-btn" id="exportBtn" title="Exportar CSV" onclick="exportDataToCSV()">📥</button>
+                    <div class="career-logo"><img src="logodeepis.png" alt="Ingeniería de Sistemas" ></div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="main">
+        <div class="container">
+            <section id="inicio" class="hero">
+                <h2 class="hero-title">Monitoreo UV en Tiempo Real</h2>
+                <p class="hero-subtitle">Sistema de medición y alertas de radiación solar para Andahuaylas, Apurímac</p>
+            </section>
+
+            <div class="dashboard">
+                <div class="card card-uv">
+                    <div class="card-header">
+                        <h3>☀️ Índice UV</h3>
+                        <span class="update-time" id="updateTime">--:--:--</span>
+                    </div>
+                    <div class="card-body">
+                        <div class="uv-meter">
+                            <div class="uv-circle">
+                                <svg class="uv-ring" viewBox="0 0 200 200">
+                                    <circle class="uv-ring-bg" cx="100" cy="100" r="90"/>
+                                    <circle class="uv-ring-progress" id="uvRing" cx="100" cy="100" r="90"/>
+                                </svg>
+                                <div class="uv-value-container">
+                                    <div class="uv-value" id="uvValue">0.0</div>
+                                    <div class="uv-level" id="uvLevel">Bajo</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="uv-alert" id="uvAlert">⏳ Esperando datos...</div>
+                    </div>
+                </div>
+                <div class="card card-light">
+                    <div class="card-header"><h3>💡 Luz Ambiental</h3></div>
+                    <div class="card-body">
+                        <div class="light-display">
+                            <div class="light-icon" id="lightIcon">💡</div>
+                            <div class="light-value" id="luxValue">0</div>
+                            <div class="light-unit">lux</div>
+                        </div>
+                        <div class="light-description" id="lightDescription">Midiendo...</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="info-grid">
+                <div class="info-card"><div class="info-icon">📍</div><h4>Ubicación</h4><p>Andahuaylas, Apurímac</p><small>Altitud: 2,926 msnm</small></div>
+                <div class="info-card" id="recommendationCard"><div class="info-icon">🛡️</div><h4>Recomendación</h4><p id="recommendationText">Esperando datos...</p></div>
+                <div class="info-card"><div class="info-icon">⚠️</div><h4>Horas Peligrosas</h4><p>11:00 AM - 3:00 PM</p><small>Evitar exposición directa</small></div>
+            </div>
+
+            <section id="datos" class="section">
+                <h2 class="section-title">📊 Datos Históricos UV</h2>
+                <p class="section-subtitle">Análisis de tendencias de radiación solar en Andahuaylas</p>
+                <div class="charts-grid">
+                    <div class="chart-card"><h3>📈 Últimas 24 Horas</h3><div class="chart-wrapper"><canvas id="chartDay"></canvas></div></div>
+                    <div class="chart-card"><h3>📊 Esta Semana</h3><div class="chart-wrapper"><canvas id="chartWeek"></canvas></div></div>
+                </div>
+                <div class="stats-grid">
+                    <div class="stat-box"><div class="stat-icon">🔥</div><div class="stat-value" id="maxUVToday">--</div><div class="stat-label">UV Máximo Hoy</div></div>
+                    <div class="stat-box"><div class="stat-icon">🕐</div><div class="stat-value" id="peakTime">--:--</div><div class="stat-label">Hora Pico</div></div>
+                    <div class="stat-box"><div class="stat-icon">📅</div><div class="stat-value" id="avgWeek">--</div><div class="stat-label">Promedio Semanal</div></div>
+                </div>
+            </section>
+
+            <section id="mapa" class="section">
+                <h2 class="section-title">🗺️ Mapa de Calor UV</h2>
+                <p class="section-subtitle">Visualización de intensidad UV en tu ubicación actual</p>
+                <div class="map-container">
+                    <div id="uvMap" class="uv-map"></div>
+                    <div class="map-legend">
+                        <h4>Leyenda UV:</h4>
+                        <div class="legend-items">
+                            <div class="legend-item"><span class="legend-color" style="background:#27ae60"></span><span>Bajo (0-2)</span></div>
+                            <div class="legend-item"><span class="legend-color" style="background:#f39c12"></span><span>Moderado (3-5)</span></div>
+                            <div class="legend-item"><span class="legend-color" style="background:#e67e22"></span><span>Alto (6-7)</span></div>
+                            <div class="legend-item"><span class="legend-color" style="background:#e74c3c"></span><span>Muy Alto (8-10)</span></div>
+                            <div class="legend-item"><span class="legend-color" style="background:#8e44ad"></span><span>Extremo (11+)</span></div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="problema" class="section">
+                <h2 class="section-title">🚨 Problemática Actual</h2>
+                <p class="section-subtitle">Andahuaylas enfrenta niveles críticos de radiación solar</p>
+                <div class="problem-grid">
+                    <div class="problem-card"><div class="problem-icon">🔥</div><h3>Radiación Extrema</h3><p>Niveles muy altos de radiación UV que provocan quemaduras, cataratas y cáncer de piel.</p></div>
+                    <div class="problem-card"><div class="problem-icon">📵</div><h3>Sin Sistema de Alertas</h3><p>No existen sistemas accesibles que midan y alerten en tiempo real.</p></div>
+                    <div class="problem-card"><div class="problem-icon">ℹ️</div><h3>Falta de Información</h3><p>La ausencia de datos confiables limita las medidas preventivas.</p></div>
+                </div>
+            </section>
+
+            <section class="section solution-section">
+                <h2 class="section-title">💡 Nuestra Solución</h2>
+                <p class="section-subtitle">Sistema integral de monitoreo y alertas UV</p>
+                <div class="solution-grid">
+                    <div class="solution-card"><div class="solution-icon">🔡</div><h3>Sensores IoT</h3><p>ESP32 con sensores GUVA-S12SD y BH1750.</p></div>
+                    <div class="solution-card"><div class="solution-icon">☁️</div><h3>Nube Firebase</h3><p>Almacenamiento y sincronización 24/7.</p></div>
+                    <div class="solution-card"><div class="solution-icon">📱</div><h3>Web App</h3><p>Plataforma responsive con alertas automáticas.</p></div>
+                    <div class="solution-card"><div class="solution-icon">📊</div><h3>Análisis de Datos</h3><p>Registro histórico y visualización de tendencias.</p></div>
+                </div>
+            </section>
+
+            <section id="enfermedades" class="section">
+                <h2 class="section-title">⚕️ Enfermedades por Radiación UV</h2>
+                <p class="section-subtitle">Conoce los riesgos de la exposición prolongada al sol</p>
+                <div class="diseases-container">
+                    <div class="disease-card" onclick="toggleDisease(this)">
+                        <div class="disease-header"><div class="disease-title"><span class="disease-icon">☀️</span><h3>Quemaduras Solares</h3></div><span class="disease-toggle">+</span></div>
+                        <div class="disease-content"><div class="disease-badge riesgo-alto">Riesgo: Corto Plazo</div><p><strong>Descripción:</strong> Daño agudo en la piel por rayos UV.</p><h4>Síntomas:</h4><ul><li>Enrojecimiento</li><li>Dolor</li><li>Ampollas</li></ul><h4>Prevención:</h4><p>Protector solar SPF 30+, evitar sol 11AM-3PM.</p></div>
+                    </div>
+                    <div class="disease-card" onclick="toggleDisease(this)">
+                        <div class="disease-header"><div class="disease-title"><span class="disease-icon">👁️</span><h3>Cataratas</h3></div><span class="disease-toggle">+</span></div>
+                        <div class="disease-content"><div class="disease-badge riesgo-alto">Riesgo: Largo Plazo</div><p><strong>Descripción:</strong> Opacidad del cristalino.</p><h4>Síntomas:</h4><ul><li>Visión borrosa</li><li>Sensibilidad a luz</li></ul><h4>Prevención:</h4><p>Gafas UV400, sombrero.</p></div>
+                    </div>
+                    <div class="disease-card critical" onclick="toggleDisease(this)">
+                        <div class="disease-header"><div class="disease-title"><span class="disease-icon">⚠️</span><h3>Cáncer de Piel</h3></div><span class="disease-toggle">+</span></div>
+                        <div class="disease-content"><div class="disease-badge riesgo-critico">Riesgo: CRÍTICO</div><p><strong>Regla ABCDE:</strong></p><ul><li><strong>A</strong>simetría</li><li><strong>B</strong>ordes irregulares</li><li><strong>C</strong>olor variado</li><li><strong>D</strong>iámetro >6mm</li><li><strong>E</strong>volución</li></ul><div class="disease-warning">⚠️ Consulta al dermatólogo ante lunares sospechosos.</div></div>
+                    </div>
+                    <div class="disease-card" onclick="toggleDisease(this)">
+                        <div class="disease-header"><div class="disease-title"><span class="disease-icon">👴</span><h3>Fotoenvejecimiento</h3></div><span class="disease-toggle">+</span></div>
+                        <div class="disease-content"><div class="disease-badge riesgo-medio">Riesgo: Mediano Plazo</div><p>Envejecimiento acelerado de la piel.</p><h4>Síntomas:</h4><ul><li>Arrugas prematuras</li><li>Manchas</li></ul><h4>Prevención:</h4><p>SPF 30+ diario.</p></div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="section team-section">
+                <h2 class="section-title">👥 Equipo de Desarrollo</h2>
+                <div class="team-grid">
+                    <div class="team-member"><div class="member-avatar">👨‍💻</div><p class="member-name">Yunior Yuliño Maucaylle Chircca</p><p class="member-role">Desarrollador de Sistemas</p></div>
+                    <div class="team-member"><div class="member-avatar">🔧</div><p class="member-name">Danny Huaman Zavala</p><p class="member-role">Desarrollador de Hardware</p></div>
+                    <div class="team-member admin-access" onclick="openAdminLogin()" title="Click para admin">
+                        <div class="member-avatar">💻</div><p class="member-name">Jhermy Yupanqui Aquise</p><p class="member-role">Desarrollador de Software</p><span class="admin-hint">🔐</span>
+                    </div>
+                </div>
+                <div class="university-info">
+                    <h3>Universidad Nacional José María Arguedas</h3>
+                    <p>Facultad de Ingeniería - Escuela Profesional de Ingeniería de Sistemas</p>
+                    <p><strong>Docente:</strong> Roberto Quispe Quispe</p>
+                    <p>Andahuaylas - Apurímac - Perú - 2025</p>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <footer class="footer">
+        <div class="container">
+            <p>&copy; 2025 SolarGuard Andahuaylas | Universidad Nacional José María Arguedas</p>
+        </div>
+    </footer>
+
+    <!-- MODAL LOGIN -->
+    <div class="admin-login-modal" id="adminLoginModal" style="display:none">
+        <div class="admin-login-box">
+            <button class="close-modal" onclick="closeAdminLogin()">✕</button>
+            <div class="login-header"><div class="login-icon">🔐</div><h2>Panel Administrador</h2><p>Editor de Datos UV</p></div>
+            <form id="adminLoginForm" onsubmit="handleLogin(event)">
+                <div class="form-group"><label>Usuario:</label><input type="text" id="adminUser" placeholder="Usuario" required></div>
+                <div class="form-group"><label>Contraseña:</label><input type="password" id="adminPass" placeholder="Contraseña" required></div>
+                <div class="login-error" id="loginError"></div>
+                <button type="submit" class="btn-login">🔓 Ingresar</button>
+            </form>
+            <p class="login-hint">💡 <b>jhermy</b> / <b>jhermy2025</b></p>
+        </div>
+    </div>
+
+    <!-- PANEL ADMIN -->
+    <div class="admin-panel-overlay" id="adminPanel" style="display:none">
+        <div class="admin-panel">
+            <div class="admin-header">
+                <h2>☀️ SolarGuard Admin</h2>
+                <div class="admin-user"><span>👤 Jhermy</span><button class="btn-logout" onclick="logoutAdmin()">🚪 Salir</button></div>
+            </div>
+            <div class="admin-content">
+                <div class="admin-actions">
+                    <button class="btn-primary" onclick="generateFakeData()">📄 Generar Datos</button>
+                    <button class="btn-success" onclick="applyToCharts()">📊 Aplicar a Gráficas</button>
+                    <button class="btn-secondary" onclick="clearAllData()">🗑️ Limpiar</button>
+                </div>
+                <div id="updateNotice" style="display:none" class="update-notice">✅ Datos aplicados a las gráficas</div>
+                <div class="historic-data-list" id="historicDataList"><p class="empty-message">Click "Generar Datos"</p></div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+    
+    <!-- CONTENEDOR DE ALERTAS UV -->
+    <div id="alertContainer" class="alert-container"></div>
+    <!-- MODAL DE CONFIGURACIÓN DE ALERTAS -->
+<div id="alertSettingsModal" class="alert-settings-modal">
+    <div class="alert-settings-content">
+        <div class="alert-settings-header">
+            <h2>⚙️ Configuración de Alertas UV</h2>
+            <button class="alert-settings-close" onclick="closeAlertSettings()">✕</button>
+        </div>
+        
+        <div class="alert-settings-body">
+            <!-- Toggle Activar/Desactivar -->
+            <div class="setting-group">
+                <div class="setting-header">
+                    <h3>🔔 Estado de Alertas</h3>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="alertEnabledToggle" checked>
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+                <p class="setting-description">Activar o desactivar las notificaciones de radiación UV peligrosa</p>
+            </div>
+            
+            <!-- Slider de Umbral -->
+            <div class="setting-group">
+                <div class="setting-header">
+                    <h3>🌡️ Nivel de Alerta</h3>
+                    <span class="threshold-value" id="alertThresholdValue">8.0</span>
+                </div>
+                <p class="setting-description">Recibirás alertas cuando el índice UV supere este nivel</p>
+                
+                <div class="slider-container">
+                    <input type="range" 
+                           id="alertThresholdSlider" 
+                           class="alert-threshold-slider"
+                           min="3" 
+                           max="15" 
+                           step="0.5" 
+                           value="8"
+                           oninput="updateAlertThreshold(this.value)">
+                    <div class="slider-labels">
+                        <span>3</span>
+                        <span>6</span>
+                        <span>8</span>
+                        <span>11</span>
+                        <span>15</span>
+                    </div>
+                </div>
+                
+                <!-- Escala de colores -->
+                <div class="uv-scale">
+                    <div class="uv-scale-item">
+                        <div class="uv-scale-color" style="background: #27ae60;"></div>
+                        <span>Bajo (0-2)</span>
+                    </div>
+                    <div class="uv-scale-item">
+                        <div class="uv-scale-color" style="background: #f39c12;"></div>
+                        <span>Moderado (3-5)</span>
+                    </div>
+                    <div class="uv-scale-item">
+                        <div class="uv-scale-color" style="background: #e67e22;"></div>
+                        <span>Alto (6-7)</span>
+                    </div>
+                    <div class="uv-scale-item">
+                        <div class="uv-scale-color" style="background: #e74c3c;"></div>
+                        <span>Muy Alto (8-10)</span>
+                    </div>
+                    <div class="uv-scale-item">
+                        <div class="uv-scale-color" style="background: #8e44ad;"></div>
+                        <span>Extremo (11+)</span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Vista Previa -->
+            <div class="setting-group">
+                <h3>👁️ Vista Previa de Alerta</h3>
+                <div id="alertPreview" class="alert-preview dangerous">
+                    <div class="alert-icon">🚨</div>
+                    <div class="alert-content">
+                        <div class="alert-title">🚨 PELIGRO UV ALTO</div>
+                        <div class="alert-message">¡Radiación UV peligrosa! Evite la exposición solar</div>
+                        <div class="alert-uv-value">☀️ UV: 8.0</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="alert-settings-footer">
+            <button class="btn-cancel" onclick="closeAlertSettings()">Cancelar</button>
+            <button class="btn-save" onclick="saveAlertSettings()">💾 Guardar</button>
+        </div>
+    </div>
+</div>
+    
+    <!-- MODAL DE EDICIÓN DE DATOS -->
+    <div id="editModal" class="edit-modal">
+        <div class="edit-modal-content">
+            <div class="edit-modal-header">
+                <h2>✏️ Editar Registros</h2>
+                <button class="edit-modal-close" onclick="closeEditModal()">✕ Cerrar</button>
+            </div>
+            <div id="editRecordsContainer" class="edit-records-container"></div>
+            <div class="edit-modal-actions">
+                <button class="btn-cancel-edits" onclick="closeEditModal()">Cancelar</button>
+                <button class="btn-save-edits" onclick="saveEdits()">💾 Guardar Cambios</button>
+            </div>
+        </div>
+    </div>
+    
+    <script src="main.js"></script>
+</body>
+</html>
