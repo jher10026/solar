@@ -342,81 +342,50 @@ function saveRealDataToFirebase(uvIndex, lux, nivel, timestamp) {
         isReal: true
     };
     
+    // ✅ PRIMERO: Agregar a memoria local INMEDIATAMENTE
+    if (!localHistoric[date]) {
+        localHistoric[date] = {};
+    }
+    localHistoric[date][timestamp] = dataToSave;
+    
+    // ✅ ACTUALIZAR GRÁFICOS INMEDIATAMENTE (ANTES de borrar Firebase)
+    updateChart24Hours();
+    updateWeekChart();
+    updateStats();
+    
     // Verificar si ya borramos este día
     if (!dayAlreadyCleared[date]) {
-        console.log(`🔄 PRIMERA CONEXIÓN del día ${date} - Borrando TODO...`);
+        console.log(`🔄 PRIMERA CONEXIÓN del día ${date} - Borrando Firebase...`);
         
-        // BORRAR TODO EL DÍA COMPLETO (una sola vez al conectar)
-        db.ref(`historic/${date}`).once('value', (snapshot) => {
-            const dayData = snapshot.val();
-            
-            if (dayData) {
-                const totalRecords = Object.keys(dayData).length;
-                console.log(`📊 ${date} tiene ${totalRecords} registros (TODOS serán eliminados)`);
-                
-                // Borrar TODO el día
-                db.ref(`historic/${date}`).remove()
-                    .then(() => {
-                        console.log(`✅ ¡DÍA ${date} BORRADO COMPLETAMENTE! (${totalRecords} registros)`);
-                        
-                        // Limpiar memoria local
-                        delete localHistoric[date];
-                        localHistoric[date] = {};
-                        
-                        // Limpiar gráfico de 24h
-                        const today = new Date().toISOString().split('T')[0];
-                        if (date === today && chartDay) {
-                            chartDay.data.datasets[0].data = Array(24).fill(null);
-                            chartDay.options.plugins.title.text = '📅 Hoy - Iniciando registro limpio...';
-                            chartDay.update();
-                            console.log(`📊 Gráfico de 24h LIMPIADO`);
-                        }
-                        
-                        // Marcar que ya borramos este día
-                        dayAlreadyCleared[date] = true;
-                        console.log(`✅ Día marcado como limpiado: ${date}`);
-                        
-                        // Actualizar gráfico semanal
-                        updateWeekChart();
-                        
-                        // Guardar primer dato después del borrado
-                        saveDataAfterClear(dataToSave, date, timestamp);
-                    })
-                    .catch(error => {
-                        console.error('❌ Error borrando día:', error);
-                    });
-            } else {
-                console.log(`📝 ${date} ya está vacío`);
+        // BORRAR Firebase
+        db.ref(`historic/${date}`).remove()
+            .then(() => {
+                console.log(`✅ Día ${date} BORRADO en Firebase`);
                 dayAlreadyCleared[date] = true;
-                saveDataAfterClear(dataToSave, date, timestamp);
-            }
-        });
+                
+                // Guardar dato en Firebase
+                return db.ref(`historic/${date}/${timestamp}`).set(dataToSave);
+            })
+            .then(() => {
+                console.log(`✅ Primer dato guardado: ${date} ${time}`);
+            })
+            .catch(error => {
+                console.error('❌ Error:', error);
+            });
     } else {
-        // Ya borramos antes, solo guardar el dato normalmente
-        console.log(`📝 Guardando dato continuo para ${date} ${time}`);
-        saveDataAfterClear(dataToSave, date, timestamp);
+        // Ya borramos antes, solo guardar
+        db.ref(`historic/${date}/${timestamp}`).set(dataToSave)
+            .then(() => {
+                console.log(`✅ Dato guardado: ${date} ${time}`);
+            })
+            .catch(error => {
+                console.error('❌ Error guardando:', error);
+            });
     }
 }
 
 // ===== GUARDAR DATO DESPUÉS DEL BORRADO =====
-function saveDataAfterClear(dataToSave, date, timestamp) {
-    db.ref(`historic/${date}/${timestamp}`).set(dataToSave)
-        .then(() => {
-            console.log(`✅ Dato guardado: ${date} ${dataToSave.time}`);
-            
-            // Agregar a memoria local
-            if (!localHistoric[date]) {
-                localHistoric[date] = {};
-            }
-            localHistoric[date][timestamp] = dataToSave;
-            
-            // Actualizar gráfico de 24h en tiempo real
-            updateChart24Hours();
-        })
-        .catch(error => {
-            console.error('❌ Error guardando dato:', error);
-        });
-}
+
 
 // ===== PROCESAR HISTÓRICO DESDE FIREBASE =====
 function processHistoricData(historicData) {
@@ -541,6 +510,7 @@ function updateStats() {
         const maxUV = Math.max(...todayUVs);
         const maxRecord = Object.values(todayData).find(r => r.uvIndex === maxUV);
         
+        // ✅ MOSTRAR UV MÁXIMO EN TIEMPO REAL
         document.getElementById('maxUVToday').textContent = maxUV.toFixed(1);
         document.getElementById('peakTime').textContent = maxRecord ? maxRecord.time.substring(0, 5) : '--:--';
     } else {
