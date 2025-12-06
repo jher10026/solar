@@ -1768,3 +1768,484 @@ document.addEventListener('click', function(e) {
         closeEditModal();
     }
 });
+// ==================== SISTEMA UNIFICADO DE ALERTAS UV ====================
+// 📌 REEMPLAZAR las funciones existentes en main.js con estas versiones mejoradas
+
+// ===== VARIABLES GLOBALES (agregar al inicio si no existen) =====
+let notificationPermission = 'default';
+let serviceWorkerRegistration = null;
+
+// ===== MODIFICAR DOMContentLoaded =====
+document.addEventListener('DOMContentLoaded', function() {
+    initCharts();
+    initMap();
+    startClock();
+    setupTheme();
+    startListeningToESP32();
+    getUserLocation();
+    startConnectionCheck();
+    
+    // ⭐ INICIALIZAR SISTEMA UNIFICADO
+    initUnifiedAlertSystem();
+});
+
+// ===== INICIALIZAR SISTEMA UNIFICADO =====
+async function initUnifiedAlertSystem() {
+    console.log('🔔 Inicializando sistema unificado de alertas...');
+    
+    // 1. Cargar configuración guardada
+    const savedState = localStorage.getItem('alertsEnabled');
+    const savedThreshold = localStorage.getItem('alertThreshold');
+    
+    if (savedState !== null) {
+        alertsEnabled = savedState === 'true';
+    }
+    
+    if (savedThreshold !== null) {
+        alertThreshold = parseFloat(savedThreshold);
+    }
+    
+    // 2. Actualizar botón visual
+    updateUnifiedAlertButton();
+    
+    // 3. Actualizar slider en el modal
+    const slider = document.getElementById('alertThresholdSlider');
+    const value = document.getElementById('alertThresholdValue');
+    if (slider && value) {
+        slider.value = alertThreshold;
+        value.textContent = alertThreshold.toFixed(1);
+        updateThresholdColor(alertThreshold);
+    }
+    
+    // 4. Inicializar notificaciones push si están soportadas
+    if ('serviceWorker' in navigator && 'Notification' in window) {
+        await initPushNotifications();
+    } else {
+        console.warn('⚠️ Notificaciones push no soportadas en este navegador');
+    }
+    
+    console.log(`✅ Sistema inicializado | Alertas: ${alertsEnabled ? 'ON' : 'OFF'} | Umbral: UV ${alertThreshold}`);
+}
+
+// ===== INICIALIZAR NOTIFICACIONES PUSH =====
+async function initPushNotifications() {
+    try {
+        // Registrar Service Worker
+        serviceWorkerRegistration = await navigator.serviceWorker.register('/sw.js', {
+            scope: '/'
+        });
+        
+        console.log('✅ Service Worker registrado');
+        
+        // Verificar permisos
+        notificationPermission = Notification.permission;
+        console.log(`🔔 Permisos de notificación: ${notificationPermission}`);
+        
+        // Si no tiene permisos y las alertas están activas, mostrar prompt
+        if (notificationPermission === 'default' && alertsEnabled) {
+            setTimeout(() => showNotificationPrompt(), 2000);
+        }
+        
+    } catch (error) {
+        console.error('❌ Error registrando Service Worker:', error);
+    }
+}
+
+// ===== MOSTRAR PROMPT PARA ACTIVAR NOTIFICACIONES =====
+function showNotificationPrompt() {
+    // Solo mostrar si no se ha mostrado antes en esta sesión
+    if (sessionStorage.getItem('notificationPromptShown')) return;
+    
+    const promptDiv = document.createElement('div');
+    promptDiv.className = 'notification-permission-prompt';
+    promptDiv.innerHTML = `
+        <div class="permission-prompt-content">
+            <div class="permission-prompt-icon">🔔</div>
+            <div class="permission-prompt-text">
+                <h4>Activa Notificaciones Push</h4>
+                <p>Recibe alertas del sistema cuando el UV sea peligroso</p>
+            </div>
+            <button class="btn-enable-notifications" onclick="requestNotificationPermission()">
+                ✅ Activar
+            </button>
+            <button class="btn-dismiss-prompt" onclick="dismissNotificationPrompt()">✕</button>
+        </div>
+    `;
+    
+    document.body.appendChild(promptDiv);
+    sessionStorage.setItem('notificationPromptShown', 'true');
+    
+    // Auto-ocultar después de 15 segundos
+    setTimeout(() => {
+        if (promptDiv.parentElement) {
+            promptDiv.style.animation = 'slideOutRight 0.5s ease';
+            setTimeout(() => promptDiv.remove(), 500);
+        }
+    }, 15000);
+}
+
+// ===== CERRAR PROMPT =====
+function dismissNotificationPrompt() {
+    const prompt = document.querySelector('.notification-permission-prompt');
+    if (prompt) {
+        prompt.style.animation = 'slideOutRight 0.5s ease';
+        setTimeout(() => prompt.remove(), 500);
+    }
+}
+
+// ===== SOLICITAR PERMISOS DE NOTIFICACIÓN =====
+async function requestNotificationPermission() {
+    console.log('📢 Solicitando permisos de notificación...');
+    
+    try {
+        const permission = await Notification.requestPermission();
+        notificationPermission = permission;
+        
+        if (permission === 'granted') {
+            console.log('✅ Permisos concedidos');
+            showTemporaryNotification(
+                '✅ Notificaciones Activadas',
+                `Recibirás alertas cuando el UV supere ${alertThreshold.toFixed(1)}`,
+                'success'
+            );
+            
+            // Cerrar prompt si está abierto
+            dismissNotificationPrompt();
+            
+            // Enviar notificación de prueba
+            setTimeout(() => sendTestNotification(), 1000);
+            
+        } else if (permission === 'denied') {
+            console.warn('🚫 Permisos denegados');
+            showTemporaryNotification(
+                '🚫 Permisos Denegados',
+                'Activa las notificaciones en la configuración de tu navegador',
+                'error'
+            );
+        }
+        
+        updateUnifiedAlertButton();
+        
+    } catch (error) {
+        console.error('❌ Error solicitando permisos:', error);
+    }
+}
+
+// ===== ENVIAR NOTIFICACIÓN DE PRUEBA =====
+function sendTestNotification() {
+    if (!serviceWorkerRegistration || !serviceWorkerRegistration.active) return;
+    
+    console.log('🧪 Enviando notificación de prueba...');
+    
+    serviceWorkerRegistration.active.postMessage({
+        type: 'SHOW_UV_NOTIFICATION',
+        uvIndex: alertThreshold + 0.5,
+        threshold: alertThreshold,
+        level: 'Muy Alto'
+    });
+}
+
+// ===== ACTUALIZAR BOTÓN UNIFICADO =====
+function updateUnifiedAlertButton() {
+    const btn = document.getElementById('alertToggleBtn');
+    const icon = document.getElementById('alertIcon');
+    
+    if (!btn || !icon) return;
+    
+    // Estado visual del botón
+    if (alertsEnabled) {
+        btn.classList.add('active');
+        btn.classList.remove('inactive');
+        icon.textContent = '🔔';
+        
+        // Agregar indicador de notificaciones push si están activas
+        if (notificationPermission === 'granted') {
+            btn.title = `Alertas Activas (UV ≥ ${alertThreshold.toFixed(1)}) + Notificaciones Push ✅`;
+            
+            // Agregar badge de push
+            if (!btn.querySelector('.push-badge')) {
+                const badge = document.createElement('span');
+                badge.className = 'push-badge';
+                badge.textContent = '📱';
+                btn.appendChild(badge);
+            }
+        } else {
+            btn.title = `Alertas Activas (UV ≥ ${alertThreshold.toFixed(1)}) - Click para configurar notificaciones`;
+            // Remover badge si existe
+            const badge = btn.querySelector('.push-badge');
+            if (badge) badge.remove();
+        }
+    } else {
+        btn.classList.add('inactive');
+        btn.classList.remove('active');
+        icon.textContent = '🔕';
+        btn.title = 'Alertas desactivadas - Click para configurar';
+        
+        // Remover badge si existe
+        const badge = btn.querySelector('.push-badge');
+        if (badge) badge.remove();
+    }
+}
+
+// ===== ABRIR MODAL DE CONFIGURACIÓN (MODIFICADO) =====
+function openAlertSettings() {
+    const modal = document.getElementById('alertSettingsModal');
+    const slider = document.getElementById('alertThresholdSlider');
+    const value = document.getElementById('alertThresholdValue');
+    const toggle = document.getElementById('alertEnabledToggle');
+    const pushStatus = document.getElementById('pushNotificationStatus');
+    
+    // Cargar valores actuales
+    slider.value = alertThreshold;
+    value.textContent = alertThreshold.toFixed(1);
+    toggle.checked = alertsEnabled;
+    
+    // Actualizar estado de notificaciones push
+    updatePushStatusInModal();
+    
+    updateThresholdColor(alertThreshold);
+    updatePreviewAlert(alertThreshold);
+    
+    modal.classList.add('active');
+    console.log('⚙️ Modal de configuración abierto');
+}
+
+// ===== ACTUALIZAR ESTADO PUSH EN MODAL =====
+function updatePushStatusInModal() {
+    const pushStatus = document.getElementById('pushNotificationStatus');
+    const enablePushBtn = document.getElementById('enablePushBtn');
+    
+    if (!pushStatus || !enablePushBtn) return;
+    
+    if (!('Notification' in window)) {
+        pushStatus.innerHTML = `
+            <div class="push-status-item unsupported">
+                <span class="push-status-icon">❌</span>
+                <div class="push-status-text">
+                    <strong>No Soportado</strong>
+                    <small>Tu navegador no soporta notificaciones push</small>
+                </div>
+            </div>
+        `;
+        enablePushBtn.style.display = 'none';
+        return;
+    }
+    
+    if (notificationPermission === 'granted') {
+        pushStatus.innerHTML = `
+            <div class="push-status-item active">
+                <span class="push-status-icon">✅</span>
+                <div class="push-status-text">
+                    <strong>Notificaciones Push Activadas</strong>
+                    <small>Recibirás alertas del sistema operativo</small>
+                </div>
+            </div>
+        `;
+        enablePushBtn.style.display = 'none';
+    } else if (notificationPermission === 'denied') {
+        pushStatus.innerHTML = `
+            <div class="push-status-item denied">
+                <span class="push-status-icon">🚫</span>
+                <div class="push-status-text">
+                    <strong>Notificaciones Bloqueadas</strong>
+                    <small>Actívalas en la configuración del navegador</small>
+                </div>
+            </div>
+        `;
+        enablePushBtn.style.display = 'none';
+    } else {
+        pushStatus.innerHTML = `
+            <div class="push-status-item inactive">
+                <span class="push-status-icon">🔔</span>
+                <div class="push-status-text">
+                    <strong>Notificaciones Push Disponibles</strong>
+                    <small>Activa para recibir alertas incluso con la app cerrada</small>
+                </div>
+            </div>
+        `;
+        enablePushBtn.style.display = 'block';
+    }
+}
+
+// ===== GUARDAR CONFIGURACIÓN (MODIFICADO) =====
+function saveAlertSettings() {
+    const slider = document.getElementById('alertThresholdSlider');
+    const toggle = document.getElementById('alertEnabledToggle');
+    
+    const newThreshold = parseFloat(slider.value);
+    const newEnabled = toggle.checked;
+    
+    // Guardar en localStorage
+    localStorage.setItem('alertThreshold', newThreshold);
+    localStorage.setItem('alertsEnabled', newEnabled);
+    
+    // Actualizar variables globales
+    alertThreshold = newThreshold;
+    alertsEnabled = newEnabled;
+    
+    // Actualizar botón principal
+    updateUnifiedAlertButton();
+    
+    console.log(`💾 Configuración guardada: UV ${newThreshold} | ${newEnabled ? 'Activado' : 'Desactivado'}`);
+    
+    // Si se activaron las alertas y no tiene permisos push, ofrecer activarlos
+    if (newEnabled && notificationPermission === 'default') {
+        setTimeout(() => showNotificationPrompt(), 500);
+    }
+    
+    // Cerrar modal
+    const modal = document.getElementById('alertSettingsModal');
+    modal.classList.remove('active');
+    
+    // Mostrar notificación de confirmación
+    setTimeout(() => {
+        showTemporaryNotification(
+            '✅ Configuración Guardada',
+            `Alertas ${newEnabled ? 'activadas' : 'desactivadas'} a partir de UV ${newThreshold.toFixed(1)}`,
+            'success'
+        );
+    }, 300);
+}
+
+// ===== VERIFICAR NIVELES PELIGROSOS (VERSIÓN UNIFICADA) =====
+function checkDangerousUVLevels(uvIndex) {
+    // 1. VERIFICAR: Sistema activado
+    if (!alertsEnabled) {
+        console.log(`🔕 Alerta bloqueada (UV ${uvIndex.toFixed(1)}) - Sistema desactivado`);
+        lastAlertUV = null;
+        return;
+    }
+    
+    // 2. VERIFICAR: UV está por debajo del umbral
+    if (uvIndex < alertThreshold) {
+        if (lastAlertUV !== null) {
+            console.log(`✅ UV ${uvIndex.toFixed(1)} bajó del umbral ${alertThreshold.toFixed(1)} - Reseteando`);
+            lastAlertUV = null;
+        }
+        return;
+    }
+    
+    // 3. UV SUPERÓ EL UMBRAL - Determinar nivel
+    let level = 'Bajo';
+    if (uvIndex >= 11) level = 'Extremo';
+    else if (uvIndex >= 8) level = 'Muy Alto';
+    else if (uvIndex >= 6) level = 'Alto';
+    else if (uvIndex >= 3) level = 'Moderado';
+    
+    // 4. PRIMERA VEZ QUE SUPERA EL UMBRAL
+    if (lastAlertUV === null) {
+        lastAlertUV = uvIndex;
+        
+        // 🔔 ALERTA VISUAL (dashboard)
+        showUVAlert(uvIndex);
+        
+        // 📱 NOTIFICACIÓN PUSH (sistema operativo)
+        sendUVNotification(uvIndex, level);
+        
+        console.log(`🚨 PRIMERA ALERTA: UV ${uvIndex.toFixed(1)} > ${alertThreshold.toFixed(1)}`);
+        console.log(`📱 Alerta visual + notificación push enviadas`);
+        return;
+    }
+    
+    // 5. UV AUMENTÓ SIGNIFICATIVAMENTE (0.5 o más)
+    if (uvIndex > lastAlertUV + 0.5) {
+        lastAlertUV = uvIndex;
+        
+        // 🔔 ALERTA VISUAL
+        showUVAlert(uvIndex);
+        
+        // 📱 NOTIFICACIÓN PUSH
+        sendUVNotification(uvIndex, level);
+        
+        console.log(`🚨 ALERTA ACTUALIZADA: UV ${uvIndex.toFixed(1)} (anterior: ${(lastAlertUV - 0.5).toFixed(1)})`);
+        console.log(`📱 Nueva notificación enviada`);
+        return;
+    }
+    
+    // 6. UV ESTABLE - No enviar alerta duplicada
+    console.log(`⏳ UV ${uvIndex.toFixed(1)} estable - Sin alerta duplicada`);
+}
+
+// ===== ENVIAR NOTIFICACIÓN UV =====
+function sendUVNotification(uvIndex, level) {
+    // Verificar permisos
+    if (notificationPermission !== 'granted') {
+        console.log('🔕 Notificaciones push no disponibles (sin permisos)');
+        return;
+    }
+    
+    // Verificar Service Worker
+    if (!serviceWorkerRegistration || !serviceWorkerRegistration.active) {
+        console.error('❌ Service Worker no disponible');
+        return;
+    }
+    
+    console.log(`📱 Enviando notificación push: UV ${uvIndex.toFixed(1)} (${level})`);
+    
+    // Enviar al Service Worker
+    serviceWorkerRegistration.active.postMessage({
+        type: 'SHOW_UV_NOTIFICATION',
+        uvIndex: uvIndex,
+        threshold: alertThreshold,
+        level: level
+    });
+}
+
+// ===== MOSTRAR NOTIFICACIÓN TEMPORAL (ya existe, solo asegurar que esté) =====
+function showTemporaryNotification(title, message, type) {
+    const container = document.getElementById('alertContainer');
+    
+    let bgColor = 'linear-gradient(135deg, #3498db, #2980b9)';
+    if (type === 'success') bgColor = 'linear-gradient(135deg, #2ecc71, #27ae60)';
+    if (type === 'error') bgColor = 'linear-gradient(135deg, #e74c3c, #c0392b)';
+    
+    const notif = document.createElement('div');
+    notif.className = 'uv-alert-notification';
+    notif.style.background = bgColor;
+    notif.innerHTML = `
+        <div class="alert-icon">${type === 'success' ? '✅' : type === 'error' ? '❌' : 'ℹ️'}</div>
+        <div class="alert-content">
+            <div class="alert-title">${title}</div>
+            <div class="alert-message">${message}</div>
+        </div>
+        <button class="alert-close" onclick="closeAlert(this)">✕</button>
+    `;
+    
+    container.appendChild(notif);
+    
+    setTimeout(() => {
+        if (notif.parentElement) {
+            notif.style.animation = 'slideOutRight 0.5s ease';
+            setTimeout(() => {
+                if (notif.parentElement) notif.remove();
+            }, 500);
+        }
+    }, 4000);
+}
+
+// ===== FUNCIÓN DE PRUEBA PARA DESARROLLADORES =====
+function testUnifiedAlertSystem() {
+    console.log('🧪 Probando sistema unificado de alertas...');
+    console.log('Estado actual:');
+    console.log('- Alertas habilitadas:', alertsEnabled);
+    console.log('- Umbral UV:', alertThreshold);
+    console.log('- Permisos push:', notificationPermission);
+    console.log('- Service Worker:', serviceWorkerRegistration ? 'Registrado' : 'No registrado');
+    
+    if (!alertsEnabled) {
+        alert('⚠️ Las alertas están desactivadas\nActívalas desde el botón 🔔');
+        return;
+    }
+    
+    // Simular UV alto
+    const testUV = alertThreshold + 1;
+    console.log(`\n🧪 Simulando UV ${testUV.toFixed(1)}...`);
+    
+    // Resetear última alerta para forzar nueva
+    lastAlertUV = null;
+    
+    // Disparar alerta
+    checkDangerousUVLevels(testUV);
+    
+    alert(`✅ Prueba completada\n\nDebe aparecer:\n- 🔔 Alerta visual en dashboard\n- 📱 Notificación push (si tienes permisos)`);
+}

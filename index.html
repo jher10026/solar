@@ -230,6 +230,8 @@
     <!-- CONTENEDOR DE ALERTAS UV -->
     <div id="alertContainer" class="alert-container"></div>
     <!-- MODAL DE CONFIGURACIÓN DE ALERTAS -->
+<!-- 📌 REEMPLAZAR el modal existente de alertSettingsModal en index.html con este código: -->
+
 <div id="alertSettingsModal" class="alert-settings-modal">
     <div class="alert-settings-content">
         <div class="alert-settings-header">
@@ -238,7 +240,10 @@
         </div>
         
         <div class="alert-settings-body">
-            <!-- Toggle Activar/Desactivar -->
+            
+            <!-- ═══════════════════════════════════════ -->
+            <!-- SECCIÓN 1: ACTIVAR/DESACTIVAR ALERTAS -->
+            <!-- ═══════════════════════════════════════ -->
             <div class="setting-group">
                 <div class="setting-header">
                     <h3>🔔 Estado de Alertas</h3>
@@ -247,16 +252,22 @@
                         <span class="toggle-slider"></span>
                     </label>
                 </div>
-                <p class="setting-description">Activar o desactivar las notificaciones de radiación UV peligrosa</p>
+                <p class="setting-description">
+                    Activar o desactivar las alertas cuando la radiación UV sea peligrosa
+                </p>
             </div>
             
-            <!-- Slider de Umbral -->
+            <!-- ═══════════════════════════════════════ -->
+            <!-- SECCIÓN 2: UMBRAL UV PERSONALIZABLE -->
+            <!-- ═══════════════════════════════════════ -->
             <div class="setting-group">
                 <div class="setting-header">
-                    <h3>🌡️ Nivel de Alerta</h3>
+                    <h3>🌡️ Nivel de Alerta Personalizado</h3>
                     <span class="threshold-value" id="alertThresholdValue">8.0</span>
                 </div>
-                <p class="setting-description">Recibirás alertas cuando el índice UV supere este nivel</p>
+                <p class="setting-description">
+                    Configura a partir de qué índice UV deseas recibir alertas
+                </p>
                 
                 <div class="slider-container">
                     <input type="range" 
@@ -268,15 +279,15 @@
                            value="8"
                            oninput="updateAlertThreshold(this.value)">
                     <div class="slider-labels">
-                        <span>3</span>
-                        <span>6</span>
-                        <span>8</span>
-                        <span>11</span>
-                        <span>15</span>
+                        <span>3<br><small>Moderado</small></span>
+                        <span>6<br><small>Alto</small></span>
+                        <span>8<br><small>Muy Alto</small></span>
+                        <span>11<br><small>Extremo</small></span>
+                        <span>15<br><small>Máximo</small></span>
                     </div>
                 </div>
                 
-                <!-- Escala de colores -->
+                <!-- Escala de colores UV -->
                 <div class="uv-scale">
                     <div class="uv-scale-item">
                         <div class="uv-scale-color" style="background: #27ae60;"></div>
@@ -301,9 +312,60 @@
                 </div>
             </div>
             
-            <!-- Vista Previa -->
+            <!-- ═══════════════════════════════════════ -->
+            <!-- SECCIÓN 3: NOTIFICACIONES PUSH -->
+            <!-- ═══════════════════════════════════════ -->
+            <div class="setting-group push-notification-section">
+                <div class="setting-header">
+                    <h3>📱 Notificaciones Push</h3>
+                </div>
+                <p class="setting-description">
+                    Recibe alertas del sistema operativo incluso con la aplicación cerrada
+                </p>
+                
+                <!-- Estado de las notificaciones push -->
+                <div id="pushNotificationStatus" class="push-notification-status">
+                    <div class="push-status-item inactive">
+                        <span class="push-status-icon">🔔</span>
+                        <div class="push-status-text">
+                            <strong>Notificaciones Push Disponibles</strong>
+                            <small>Activa para recibir alertas incluso con la app cerrada</small>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Botón para activar notificaciones -->
+                <button id="enablePushBtn" 
+                        class="btn-enable-push" 
+                        onclick="requestNotificationPermission()">
+                    🔔 Activar Notificaciones Push
+                </button>
+                
+                <!-- Características de las notificaciones push -->
+                <div class="push-features">
+                    <div class="push-feature-item">
+                        <span class="feature-icon">📱</span>
+                        <small>Alertas nativas del sistema</small>
+                    </div>
+                    <div class="push-feature-item">
+                        <span class="feature-icon">🔊</span>
+                        <small>Con sonido y vibración</small>
+                    </div>
+                    <div class="push-feature-item">
+                        <span class="feature-icon">⏱️</span>
+                        <small>Funcionan en segundo plano</small>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- ═══════════════════════════════════════ -->
+            <!-- SECCIÓN 4: VISTA PREVIA DE ALERTA -->
+            <!-- ═══════════════════════════════════════ -->
             <div class="setting-group">
                 <h3>👁️ Vista Previa de Alerta</h3>
+                <p class="setting-description">
+                    Así se verá la alerta visual en el dashboard
+                </p>
                 <div id="alertPreview" class="alert-preview dangerous">
                     <div class="alert-icon">🚨</div>
                     <div class="alert-content">
@@ -315,12 +377,290 @@
             </div>
         </div>
         
+        <!-- ═══════════════════════════════════════ -->
+        <!-- PIE DEL MODAL -->
+        <!-- ═══════════════════════════════════════ -->
         <div class="alert-settings-footer">
             <button class="btn-cancel" onclick="closeAlertSettings()">Cancelar</button>
-            <button class="btn-save" onclick="saveAlertSettings()">💾 Guardar</button>
+            <button class="btn-save" onclick="saveAlertSettings()">💾 Guardar Configuración</button>
         </div>
     </div>
 </div>
+
+<!-- 
+═══════════════════════════════════════════════════════════════
+ESTILOS CSS ADICIONALES - Agregar al final de style.css
+═══════════════════════════════════════════════════════════════
+-->
+
+<style>
+/* ===== SECCIÓN DE NOTIFICACIONES PUSH EN EL MODAL ===== */
+.push-notification-section {
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.05), rgba(118, 75, 162, 0.05));
+    border: 2px solid rgba(102, 126, 234, 0.2);
+    border-radius: 12px;
+    padding: 20px !important;
+}
+
+.push-notification-status {
+    margin: 15px 0;
+}
+
+.push-status-item {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    padding: 15px;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 2px solid transparent;
+    transition: all 0.3s ease;
+}
+
+.push-status-item.active {
+    background: rgba(46, 204, 113, 0.1);
+    border-color: #2ecc71;
+}
+
+.push-status-item.inactive {
+    background: rgba(149, 165, 166, 0.1);
+    border-color: rgba(149, 165, 166, 0.3);
+}
+
+.push-status-item.denied {
+    background: rgba(231, 76, 60, 0.1);
+    border-color: #e74c3c;
+}
+
+.push-status-item.unsupported {
+    background: rgba(149, 165, 166, 0.1);
+    border-color: rgba(149, 165, 166, 0.3);
+    opacity: 0.6;
+}
+
+.push-status-icon {
+    font-size: 32px;
+    line-height: 1;
+}
+
+.push-status-text strong {
+    display: block;
+    font-size: 16px;
+    margin-bottom: 5px;
+    color: var(--text-primary);
+}
+
+.push-status-text small {
+    display: block;
+    font-size: 13px;
+    color: var(--text-secondary);
+}
+
+/* ===== BOTÓN ACTIVAR PUSH ===== */
+.btn-enable-push {
+    width: 100%;
+    padding: 15px 25px;
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white;
+    border: none;
+    border-radius: 10px;
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+    margin: 15px 0;
+}
+
+.btn-enable-push:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.5);
+}
+
+.btn-enable-push:active {
+    transform: scale(0.98);
+}
+
+/* ===== CARACTERÍSTICAS PUSH ===== */
+.push-features {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-top: 15px;
+}
+
+.push-feature-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 15px;
+    background: rgba(102, 126, 234, 0.1);
+    border-radius: 8px;
+    flex: 1;
+    min-width: 150px;
+}
+
+.feature-icon {
+    font-size: 20px;
+}
+
+.push-feature-item small {
+    font-size: 12px;
+    color: var(--text-secondary);
+    font-weight: 500;
+}
+
+/* ===== BADGE EN BOTÓN DE ALERTAS ===== */
+.push-badge {
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    background: linear-gradient(135deg, #2ecc71, #27ae60);
+    color: white;
+    font-size: 14px;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 8px rgba(46, 204, 113, 0.5);
+    animation: pulse-badge 2s infinite;
+    border: 2px solid var(--bg-primary);
+}
+
+@keyframes pulse-badge {
+    0%, 100% {
+        transform: scale(1);
+        box-shadow: 0 2px 8px rgba(46, 204, 113, 0.5);
+    }
+    50% {
+        transform: scale(1.1);
+        box-shadow: 0 2px 12px rgba(46, 204, 113, 0.8);
+    }
+}
+
+/* ===== PROMPT FLOTANTE ===== */
+.notification-permission-prompt {
+    position: fixed;
+    top: 90px;
+    right: 20px;
+    z-index: 10000;
+    animation: slideInRight 0.5s ease;
+}
+
+.permission-prompt-content {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    padding: 20px;
+    border-radius: 16px;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    max-width: 400px;
+    position: relative;
+}
+
+.permission-prompt-icon {
+    font-size: 48px;
+    filter: drop-shadow(0 4px 8px rgba(0,0,0,0.2));
+}
+
+.permission-prompt-text h4 {
+    margin: 0 0 5px 0;
+    color: white;
+    font-size: 18px;
+    font-weight: 700;
+}
+
+.permission-prompt-text p {
+    margin: 0;
+    color: rgba(255,255,255,0.9);
+    font-size: 14px;
+}
+
+.btn-enable-notifications {
+    background: white;
+    color: #667eea;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    white-space: nowrap;
+}
+
+.btn-enable-notifications:hover {
+    background: #f0f0f0;
+    transform: scale(1.05);
+}
+
+.btn-dismiss-prompt {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: rgba(255,255,255,0.2);
+    border: none;
+    color: white;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 16px;
+    transition: all 0.2s ease;
+}
+
+.btn-dismiss-prompt:hover {
+    background: rgba(255,255,255,0.3);
+}
+
+/* ===== ANIMACIONES ===== */
+@keyframes slideInRight {
+    from {
+        transform: translateX(500px);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+@keyframes slideOutRight {
+    from {
+        transform: translateX(0);
+        opacity: 1;
+    }
+    to {
+        transform: translateX(500px);
+        opacity: 0;
+    }
+}
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 768px) {
+    .notification-permission-prompt {
+        right: 10px;
+        left: 10px;
+        top: 80px;
+    }
+    
+    .permission-prompt-content {
+        flex-direction: column;
+        text-align: center;
+        padding: 15px;
+    }
+    
+    .push-features {
+        flex-direction: column;
+    }
+    
+    .push-feature-item {
+        min-width: 100%;
+    }
+}
+</style>
     
     <!-- MODAL DE EDICIÓN DE DATOS -->
     <div id="editModal" class="edit-modal">

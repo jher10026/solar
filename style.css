@@ -2406,3 +2406,269 @@
         text-align: center;
     }
 }
+/* ===== SECCIÓN DE NOTIFICACIONES PUSH EN EL MODAL ===== */
+.push-notification-section {
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.05), rgba(118, 75, 162, 0.05));
+    border: 2px solid rgba(102, 126, 234, 0.2);
+    border-radius: 12px;
+    padding: 20px !important;
+}
+
+.push-notification-status {
+    margin: 15px 0;
+}
+
+.push-status-item {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    padding: 15px;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 2px solid transparent;
+    transition: all 0.3s ease;
+}
+
+.push-status-item.active {
+    background: rgba(46, 204, 113, 0.1);
+    border-color: #2ecc71;
+}
+
+.push-status-item.inactive {
+    background: rgba(149, 165, 166, 0.1);
+    border-color: rgba(149, 165, 166, 0.3);
+}
+
+.push-status-item.denied {
+    background: rgba(231, 76, 60, 0.1);
+    border-color: #e74c3c;
+}
+
+.push-status-item.unsupported {
+    background: rgba(149, 165, 166, 0.1);
+    border-color: rgba(149, 165, 166, 0.3);
+    opacity: 0.6;
+}
+
+.push-status-icon {
+    font-size: 32px;
+    line-height: 1;
+}
+
+.push-status-text strong {
+    display: block;
+    font-size: 16px;
+    margin-bottom: 5px;
+    color: var(--text-primary);
+}
+
+.push-status-text small {
+    display: block;
+    font-size: 13px;
+    color: var(--text-secondary);
+}
+
+/* ===== BOTÓN ACTIVAR PUSH ===== */
+.btn-enable-push {
+    width: 100%;
+    padding: 15px 25px;
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white;
+    border: none;
+    border-radius: 10px;
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+    margin: 15px 0;
+}
+
+.btn-enable-push:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.5);
+}
+
+.btn-enable-push:active {
+    transform: scale(0.98);
+}
+
+/* ===== CARACTERÍSTICAS PUSH ===== */
+.push-features {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-top: 15px;
+}
+
+.push-feature-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 15px;
+    background: rgba(102, 126, 234, 0.1);
+    border-radius: 8px;
+    flex: 1;
+    min-width: 150px;
+}
+
+.feature-icon {
+    font-size: 20px;
+}
+
+.push-feature-item small {
+    font-size: 12px;
+    color: var(--text-secondary);
+    font-weight: 500;
+}
+
+/* ===== BADGE EN BOTÓN DE ALERTAS ===== */
+.push-badge {
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    background: linear-gradient(135deg, #2ecc71, #27ae60);
+    color: white;
+    font-size: 14px;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 8px rgba(46, 204, 113, 0.5);
+    animation: pulse-badge 2s infinite;
+    border: 2px solid var(--bg-primary);
+}
+
+@keyframes pulse-badge {
+    0%, 100% {
+        transform: scale(1);
+        box-shadow: 0 2px 8px rgba(46, 204, 113, 0.5);
+    }
+    50% {
+        transform: scale(1.1);
+        box-shadow: 0 2px 12px rgba(46, 204, 113, 0.8);
+    }
+}
+
+/* ===== PROMPT FLOTANTE ===== */
+.notification-permission-prompt {
+    position: fixed;
+    top: 90px;
+    right: 20px;
+    z-index: 10000;
+    animation: slideInRight 0.5s ease;
+}
+
+.permission-prompt-content {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    padding: 20px;
+    border-radius: 16px;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    max-width: 400px;
+    position: relative;
+}
+
+.permission-prompt-icon {
+    font-size: 48px;
+    filter: drop-shadow(0 4px 8px rgba(0,0,0,0.2));
+}
+
+.permission-prompt-text h4 {
+    margin: 0 0 5px 0;
+    color: white;
+    font-size: 18px;
+    font-weight: 700;
+}
+
+.permission-prompt-text p {
+    margin: 0;
+    color: rgba(255,255,255,0.9);
+    font-size: 14px;
+}
+
+.btn-enable-notifications {
+    background: white;
+    color: #667eea;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    white-space: nowrap;
+}
+
+.btn-enable-notifications:hover {
+    background: #f0f0f0;
+    transform: scale(1.05);
+}
+
+.btn-dismiss-prompt {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: rgba(255,255,255,0.2);
+    border: none;
+    color: white;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 16px;
+    transition: all 0.2s ease;
+}
+
+.btn-dismiss-prompt:hover {
+    background: rgba(255,255,255,0.3);
+}
+
+/* ===== ANIMACIONES ===== */
+@keyframes slideInRight {
+    from {
+        transform: translateX(500px);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+@keyframes slideOutRight {
+    from {
+        transform: translateX(0);
+        opacity: 1;
+    }
+    to {
+        transform: translateX(500px);
+        opacity: 0;
+    }
+}
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 768px) {
+    .notification-permission-prompt {
+        right: 10px;
+        left: 10px;
+        top: 80px;
+    }
+    
+    .permission-prompt-content {
+        flex-direction: column;
+        text-align: center;
+        padding: 15px;
+    }
+    
+    .push-features {
+        flex-direction: column;
+    }
+    
+    .push-feature-item {
+        min-width: 100%;
+    }
+}
