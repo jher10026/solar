@@ -203,19 +203,25 @@ function updateUVAlert(uvIndex) {
 }
 
 // ===== ACTUALIZAR ANILLO UV =====
+// ✅ CÓDIGO CORREGIDO
 function updateUVRing(uvIndex) {
     const ring = document.getElementById('uvRing');
     const maxUV = 15;
     const circumference = 2 * Math.PI * 90;
     const progress = (uvIndex / maxUV) * circumference;
     
+    // ✅ AGREGAR ESTAS DOS LÍNEAS CRÍTICAS:
+    ring.style.strokeDasharray = circumference;
     ring.style.strokeDashoffset = circumference - progress;
     
+    // Cambiar color según nivel UV
     if (uvIndex < 3) ring.style.stroke = '#27ae60';
     else if (uvIndex < 6) ring.style.stroke = '#f39c12';
     else if (uvIndex < 8) ring.style.stroke = '#e67e22';
     else if (uvIndex < 11) ring.style.stroke = '#e74c3c';
     else ring.style.stroke = '#8e44ad';
+    
+    console.log(`🎨 Anillo UV actualizado: ${uvIndex.toFixed(1)} - Color aplicado`);
 }
 
 // ===== ACTUALIZAR ICONO DE LUZ =====
