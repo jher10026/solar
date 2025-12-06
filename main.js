@@ -156,8 +156,8 @@ function updateDashboard(data) {
     document.getElementById('uvLevel').textContent = nivel;
 
     updateUVRing(uvIndex);
-    updateHeatMapColor(uvIndex);
     updateUVAlert(uvIndex);
+    updateHeatMapColor(uvIndex);
 
     document.getElementById('luxValue').textContent = Math.floor(lux);
     updateLightIcon(lux);
@@ -206,22 +206,36 @@ function updateUVAlert(uvIndex) {
 // ✅ CÓDIGO CORREGIDO
 function updateUVRing(uvIndex) {
     const ring = document.getElementById('uvRing');
+    if (!ring) {
+        console.error('❌ Elemento uvRing no encontrado');
+        return;
+    }
+    
     const maxUV = 15;
-    const circumference = 2 * Math.PI * 90;
+    const circumference = 2 * Math.PI * 90;  // 565.48
     const progress = (uvIndex / maxUV) * circumference;
     
-    // ✅ AGREGAR ESTAS DOS LÍNEAS CRÍTICAS:
-    ring.style.strokeDasharray = circumference;
-    ring.style.strokeDashoffset = circumference - progress;
+    // ✅ CONFIGURAR DASHARRAY (CRÍTICO)
+    ring.style.strokeDasharray = `${circumference}`;
+    ring.style.strokeDashoffset = `${circumference - progress}`;
     
-    // Cambiar color según nivel UV
-    if (uvIndex < 3) ring.style.stroke = '#27ae60';
-    else if (uvIndex < 6) ring.style.stroke = '#f39c12';
-    else if (uvIndex < 8) ring.style.stroke = '#e67e22';
-    else if (uvIndex < 11) ring.style.stroke = '#e74c3c';
-    else ring.style.stroke = '#8e44ad';
+    // ✅ CAMBIAR COLOR SEGÚN NIVEL UV
+    let color = '#27ae60';
+    if (uvIndex < 3) {
+        color = '#27ae60';  // Verde
+    } else if (uvIndex < 6) {
+        color = '#f39c12';  // Amarillo
+    } else if (uvIndex < 8) {
+        color = '#e67e22';  // Naranja
+    } else if (uvIndex < 11) {
+        color = '#e74c3c';  // Rojo
+    } else {
+        color = '#8e44ad';  // Morado
+    }
     
-    console.log(`🎨 Anillo UV actualizado: ${uvIndex.toFixed(1)} - Color aplicado`);
+    ring.style.stroke = color;
+    
+    console.log(`🎨 Anillo UV: ${uvIndex.toFixed(1)} | Progreso: ${progress.toFixed(0)}/${circumference.toFixed(0)} | Color: ${color}`);
 }
 
 // ===== ACTUALIZAR ICONO DE LUZ =====
@@ -277,12 +291,13 @@ function updateSensorStatus(isOnline) {
     if (isOnline) {
         statusDot.style.background = '#2ecc71';
         statusDot.style.boxShadow = '0 0 10px #2ecc71, 0 0 20px rgba(46, 204, 113, 0.5)';
+        console.log('✅ Sensor ONLINE - Punto verde');
     } else {
         statusDot.style.background = '#95a5a6';
         statusDot.style.boxShadow = 'none';
+        updateHeatMapColor('offline');  // ✅ SOLO actualizar mapa cuando esté OFFLINE
+        console.log('⚫ Sensor OFFLINE - Punto gris');
     }
-    // ✅ AGREGAR ESTA LÍNEA:
-    updateHeatMapColor('offline');
 }
 
 // ===== HISTÓRICO LOCAL =====
@@ -1386,47 +1401,70 @@ function updateAlertButton() {
 
 // ===== VERIFICAR NIVELES PELIGROSOS (MODIFICADO) =====
 function checkDangerousUVLevels(uvIndex) {
-    // Solo alertar si está activado y supera el umbral
+    // ✅ 1. VERIFICAR: Sistema activado
     if (!alertsEnabled) {
         console.log(`🔕 Alerta bloqueada (UV ${uvIndex.toFixed(1)}) - Sistema desactivado`);
-        return;
-    }
-    
-    if (uvIndex < alertThreshold) {
-        // Resetear cuando baja del umbral
         lastAlertUV = null;
         return;
     }
     
-    // Evitar alertas repetitivas (solo si el UV cambió significativamente)
-    if (lastAlertUV === null || Math.abs(uvIndex - lastAlertUV) >= 1) {
+    // ✅ 2. VERIFICAR: UV está por debajo del umbral
+    if (uvIndex < alertThreshold) {
+        // Si el UV baja del umbral, resetear para permitir nueva alerta cuando suba
+        if (lastAlertUV !== null) {
+            console.log(`✅ UV ${uvIndex.toFixed(1)} bajó del umbral ${alertThreshold.toFixed(1)} - Reseteando alerta`);
+            lastAlertUV = null;
+        }
+        return;
+    }
+    
+    // ✅ 3. UV SUPERÓ EL UMBRAL - Mostrar notificación
+    
+    // Si es la primera vez que supera el umbral
+    if (lastAlertUV === null) {
         lastAlertUV = uvIndex;
         showUVAlert(uvIndex);
-        playAlertSound();
-        console.log(`🚨 ALERTA ACTIVADA: UV ${uvIndex.toFixed(1)} (umbral: ${alertThreshold})`);
+        console.log(`🚨 PRIMERA ALERTA: UV ${uvIndex.toFixed(1)} superó tu umbral de ${alertThreshold.toFixed(1)}`);
+        return;
     }
+    
+    // Si el UV aumentó significativamente (0.3 o más), mostrar nueva alerta
+    if (uvIndex > lastAlertUV + 0.3) {
+        lastAlertUV = uvIndex;
+        showUVAlert(uvIndex);
+        console.log(`🚨 ALERTA ACTUALIZADA: UV ${uvIndex.toFixed(1)} aumentó significativamente (anterior: ${lastAlertUV.toFixed(1)})`);
+        return;
+    }
+    
+    // Si no hay cambio significativo, no molestar
+    console.log(`⏳ UV ${uvIndex.toFixed(1)} estable - No enviar alerta duplicada (última: ${lastAlertUV.toFixed(1)})`);
 }
 
 // ===== MOSTRAR ALERTA VISUAL =====
+// ✅ CÓDIGO CORREGIDO
 function showUVAlert(uvIndex) {
     const container = document.getElementById('alertContainer');
     
     let alertClass = 'dangerous';
-    let alertTitle = '🚨 PELIGRO UV ALTO';
-    let alertMessage = '¡Radiación UV peligrosa detectada! Evite la exposición solar.';
+    let alertTitle = '🚨 ALERTA UV';
+    let alertMessage = `El índice UV actual (${uvIndex.toFixed(1)}) superó tu umbral configurado de ${alertThreshold.toFixed(1)}`;
     
     if (uvIndex >= 11) {
         alertClass = 'extreme';
-        alertTitle = '☢️ PELIGRO EXTREMO';
-        alertMessage = '¡NIVEL UV EXTREMO! NO se exponga al sol bajo ninguna circunstancia.';
+        alertTitle = '☢️ UV EXTREMO';
+        alertMessage = `¡PELIGRO! UV ${uvIndex.toFixed(1)} superó tu límite de ${alertThreshold.toFixed(1)}. NO se exponga al sol.`;
     } else if (uvIndex >= 8) {
         alertClass = 'dangerous';
-        alertTitle = '🚨 PELIGRO UV ALTO';
-        alertMessage = '¡Radiación UV peligrosa! Use protección máxima y evite exposición prolongada.';
+        alertTitle = '🚨 UV MUY ALTO';
+        alertMessage = `¡Cuidado! UV ${uvIndex.toFixed(1)} excedió tu umbral de ${alertThreshold.toFixed(1)}. Use protección máxima.`;
     } else if (uvIndex >= 6) {
         alertClass = 'moderate';
-        alertTitle = '⚠️ PRECAUCIÓN UV MODERADO';
-        alertMessage = 'Nivel UV elevado. Use protector solar SPF 30+ y sombrero.';
+        alertTitle = '⚠️ UV ALTO';
+        alertMessage = `Atención: UV ${uvIndex.toFixed(1)} superó tu límite de ${alertThreshold.toFixed(1)}. Use protector solar.`;
+    } else {
+        alertClass = 'safe';
+        alertTitle = '💡 ALERTA UV';
+        alertMessage = `El UV ${uvIndex.toFixed(1)} superó tu umbral personalizado de ${alertThreshold.toFixed(1)}.`;
     }
     
     const now = new Date();
@@ -1439,7 +1477,7 @@ function showUVAlert(uvIndex) {
         <div class="alert-content">
             <div class="alert-title">${alertTitle}</div>
             <div class="alert-message">${alertMessage}</div>
-            <div class="alert-uv-value">☀️ UV: ${uvIndex.toFixed(1)}</div>
+            <div class="alert-uv-value">☀️ UV Actual: ${uvIndex.toFixed(1)} | Umbral: ${alertThreshold.toFixed(1)}</div>
             <div class="alert-time">🕐 ${time}</div>
         </div>
         <button class="alert-close" onclick="closeAlert(this)">✕</button>
@@ -1447,6 +1485,7 @@ function showUVAlert(uvIndex) {
     
     container.appendChild(alertDiv);
     
+    // ✅ Auto-cerrar después de 15 segundos
     setTimeout(() => {
         if (alertDiv.parentElement) {
             alertDiv.style.animation = 'slideOutRight 0.5s ease';
@@ -1458,12 +1497,12 @@ function showUVAlert(uvIndex) {
         }
     }, 15000);
     
+    // Limitar a máximo 3 notificaciones visibles
     const alerts = container.querySelectorAll('.uv-alert-notification');
     if (alerts.length > 3) {
         alerts[0].remove();
     }
 }
-
 // ===== CERRAR ALERTA =====
 function closeAlert(button) {
     const alert = button.closest('.uv-alert-notification');
@@ -1473,38 +1512,9 @@ function closeAlert(button) {
 
 // ===== REPRODUCIR SONIDO =====
 function playAlertSound() {
-    try {
-        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-        const oscillator = audioContext.createOscillator();
-        const gainNode = audioContext.createGain();
-        
-        oscillator.connect(gainNode);
-        gainNode.connect(audioContext.destination);
-        
-        oscillator.frequency.value = 800;
-        oscillator.type = 'sine';
-        gainNode.gain.value = 0.3;
-        
-        oscillator.start(audioContext.currentTime);
-        oscillator.stop(audioContext.currentTime + 0.2);
-        
-        setTimeout(() => {
-            const oscillator2 = audioContext.createOscillator();
-            const gainNode2 = audioContext.createGain();
-            
-            oscillator2.connect(gainNode2);
-            gainNode2.connect(audioContext.destination);
-            
-            oscillator2.frequency.value = 1000;
-            oscillator2.type = 'sine';
-            gainNode2.gain.value = 0.3;
-            
-            oscillator2.start(audioContext.currentTime);
-            oscillator2.stop(audioContext.currentTime + 0.2);
-        }, 300);
-    } catch (error) {
-        console.log('⚠️ No se pudo reproducir sonido:', error.message);
-    }
+    // ✅ Función deshabilitada - Solo notificaciones visuales
+    console.log('🔇 Sonido de alerta deshabilitado');
+    return;
 }
 
 // ===== MOSTRAR NOTIFICACIÓN TEMPORAL =====
@@ -1539,12 +1549,12 @@ function showTemporaryNotification(title, message, type) {
 }
 
 // Inicializar al cargar
+// ✅ INICIALIZAR SISTEMA DE ALERTAS AL CARGAR
 document.addEventListener('DOMContentLoaded', function() {
-    setTimeout(() => {
-        initAlertSystem();
-    }, 100);
+    console.log('🔔 Inicializando sistema de alertas...');
+    initAlertSystem();
+    console.log(`✅ Alertas: ${alertsEnabled ? 'ACTIVAS' : 'INACTIVAS'} | Umbral: UV ${alertThreshold.toFixed(1)}`);
 });
-
 // ===== RESETEAR BANDERA DE BORRADO A MEDIANOCHE =====
 function resetDailyClearFlag() {
     const now = new Date();
